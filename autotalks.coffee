@@ -9,11 +9,13 @@ unless MiyoFilters?
 MiyoFilters.autotalks_caller = (argument, request, id, stash) ->
 	unless @variables_temporary.autotalks_caller?
 		@variables_temporary.autotalks_caller = {}
-		unless @variables_temporary.autotalks_caller[id]
-			@variables_temporary.autotalks_caller[id] = 0
-	id = argument.autotalks_caller.id
-	count = argument.autotalks_caller.count || 0
-	fluctuation = argument.autotalks_caller.fluctuation || 0
+	unless @variables_temporary.autotalks_caller[id]
+		@variables_temporary.autotalks_caller[id] = 0
+	to_id = @property argument.autotalks_caller, 'id', request, id, stash
+	count = @property argument.autotalks_caller, 'count', request, id, stash
+	count ||= 0
+	fluctuation = @property argument.autotalks_caller, 'fluctuation', request, id, stash
+	fluctuation ||= 0
 	count = count - fluctuation + Math.round(Math.random() * fluctuation * 2)
 	stash = {} if not stash?
 	stash.autotalks_trigger = count <= @variables_temporary.autotalks_caller[id]
@@ -21,7 +23,7 @@ MiyoFilters.autotalks_caller = (argument, request, id, stash) ->
 		@variables_temporary.autotalks_caller[id] = 0
 	else
 		@variables_temporary.autotalks_caller[id]++
-	@call_id id, request, stash
+	@call_id to_id, request, stash
 
 MiyoFilters.autotalks = (argument, request, id, stash) ->
 	unless @variables.autotalks?
@@ -53,7 +55,7 @@ MiyoFilters.autotalks = (argument, request, id, stash) ->
 		else
 			return
 	# 条件を満たすset
-	use_sets = MiyoFilters.autotalks.choose_talks.call @, autotalks, request, id
+	use_sets = MiyoFilters.autotalks.choose_talks.call @, autotalks, request, id, stash
 	return MiyoFilters.autotalks.select_talks.call @, use_sets, request, id, stash
 
 MiyoFilters.autotalks.trace_justtime_talks = (autotalks, id) ->
@@ -78,7 +80,7 @@ MiyoFilters.autotalks.run_chain = (request, id, stash) ->
 		@variables_temporary.autotalks.chain_position = null
 		return
 
-MiyoFilters.autotalks.choose_talks = (autotalks, request, id) ->
+MiyoFilters.autotalks.choose_talks = (autotalks, request, id, stash) ->
 	# 現在の条件に合致するエントリ=可能エントリを抽出
 	# whenの処理
 	date = new Date()
@@ -92,15 +94,25 @@ MiyoFilters.autotalks.choose_talks = (autotalks, request, id) ->
 					use = false if @variables.autotalks.once[set.when.once]?
 				if use and set.when.once_per_boot?
 					use = false if @variables_temporary.autotalks.once_per_boot[set.when.once_per_boot]?
-				if use and set.when.period?
-					unless set.when._period?
-						code = set.when.period.replace /@([\dT*\/.:-]+)@/g, '''(new PartPeriod('$1')).includes(date)'''
-						set.when._period = new Function 'PartPeriod', 'date', 'request', 'id', 'return ' + code
-					use = false unless set.when._period.call @, PartPeriod, date, request, id
-				if use and set.when.condition?
-					unless set.when._condition?
-						set.when._condition = new Function 'request', 'id', 'return ' + set.when.condition
-					use = false unless set.when._condition.call @, request, id
+				if use and @has_property set.when, 'period'
+					period_hook_js = (property, request, id, stash) -> 'var PartPeriod = stash.PartPeriod; var date = stash.date; ' + property.replace /@([\dT*\/.:-]+)@/g, '''(new PartPeriod('$1')).includes(date)'''
+					period_hook_jse = (property, request, id, stash) -> property.replace /@([\dT*\/.:-]+)@/g, '''(new stash.PartPeriod('$1')).includes(stash.date)'''
+					period_hook_coffee = (property, request, id, stash) -> 'PartPeriod = stash.PartPeriod; date = stash.date; ' + property.replace /@([\dT*\/.:-]+)@/g, '''(new PartPeriod('$1')).includes(date)'''
+					period_hooks =
+						'js': period_hook_js
+						'jse': period_hook_jse
+						'coffee': period_hook_coffee
+					period_stash = PartPeriod: PartPeriod, date: new Date()
+					period_stash[name] = value for name, value of stash
+					try
+						use = false unless @property set.when, 'period', request, id, period_stash, period_hooks
+					catch error
+						throw 'period execute error: ' + error
+				if use and @has_property set.when, 'condition'
+					try
+						use = false unless @property set.when, 'condition', request, id, stash
+					catch error
+						throw 'condition execute error: ' + error
 			if use
 				priority = set.priority if set.priority?
 				throw "priority must be numeric: #{priority}" if isNaN priority
@@ -118,11 +130,9 @@ MiyoFilters.autotalks.select_talks = (use_sets, request, id, stash) ->
 		biases = []
 		for set in use_sets[priority]
 			bias = 1
-			if set.bias?
-				unless set._bias?
-					set._bias = new Function 'request', 'id', 'return ' + set.bias
+			if @has_property set, 'bias'
 				try
-					bias = set._bias.call @, request, id
+					bias = @property set, 'bias', request, id, stash
 				catch error
 					throw 'bias execute error: ' + error
 			throw "bias must be numeric >= 0: #{bias}" if (isNaN bias) or (bias < 0)

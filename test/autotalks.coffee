@@ -2,29 +2,37 @@ chai = require 'chai'
 chai.should()
 expect = chai.expect
 sinon = require 'sinon'
+property_filter = require 'miyojs-filter-property'
 MiyoFilters = require '../autotalks.js'
 
 describe 'caller', ->
 	ms = null
 	request = null
 	id = null
+	to_id = null
 	random = null
 	filter = MiyoFilters.autotalks_caller
 	beforeEach ->
 		ms = sinon.stub()
+		ms.filters =
+			property_handler: property_filter.property_handler
+		property_filter.property_initialize.call ms,
+			property_initialize:
+				handlers: ['coffee', 'jse', 'js']
 		ms.variables = {}
 		ms.variables_temporary = {}
 		ms.call_id = sinon.stub()
 		ms.call_id.returnsArg 0
 		request = sinon.stub()
 		id = 'OnTest'
+		to_id = 'OnTest2'
 		random = sinon.stub Math, 'random'
 	afterEach ->
 		random.restore()
 	it 'should work with only id', ->
 		argument =
 			autotalks_caller:
-				id: id
+				id: to_id
 		random.returns 0
 		filter.call(ms, argument, request, id)
 		stash = {autotalks_trigger: true}
@@ -34,7 +42,7 @@ describe 'caller', ->
 	it 'should work with count', ->
 		argument =
 			autotalks_caller:
-				id: id
+				id: to_id
 				count: 2
 		random.returns 0
 		filter.call(ms, argument, request, id)
@@ -52,7 +60,7 @@ describe 'caller', ->
 	it 'should work with count and fluctuation', ->
 		argument =
 			autotalks_caller:
-				id: id
+				id: to_id
 				count: 5
 				fluctuation: 2
 		random.returns 0
@@ -88,6 +96,11 @@ describe 'do with no "when"', ->
 	filter = MiyoFilters.autotalks
 	beforeEach ->
 		ms = sinon.stub()
+		ms.filters =
+			property_handler: property_filter.property_handler
+		property_filter.property_initialize.call ms,
+			property_initialize:
+				handlers: ['coffee', 'jse', 'js']
 		ms.variables = {}
 		ms.variables_temporary = {}
 		ms.call_entry = sinon.stub()
@@ -117,7 +130,7 @@ describe 'do with no "when"', ->
 				}
 				{
 					do: 'do 2'
-					bias: '1 + 1'
+					'bias.jse': '1 + 1'
 				}
 				{
 					do: 'do 3'
@@ -163,7 +176,7 @@ describe 'do with no "when"', ->
 				}
 				{
 					do: 'do 2'
-					bias: '"a"'
+					'bias.jse': '"a"'
 				}
 				{
 					do: 'do 3'
@@ -180,7 +193,7 @@ describe 'do with no "when"', ->
 				}
 				{
 					do: 'do 2'
-					bias: 'a'
+					'bias.jse': 'a'
 				}
 				{
 					do: 'do 3'
@@ -268,6 +281,11 @@ describe 'chain with no "when"', ->
 	filter = MiyoFilters.autotalks
 	beforeEach ->
 		ms = sinon.stub()
+		ms.filters =
+			property_handler: property_filter.property_handler
+		property_filter.property_initialize.call ms,
+			property_initialize:
+				handlers: ['coffee', 'jse', 'js']
 		ms.variables = {}
 		ms.variables_temporary = {}
 		ms.call_value = sinon.stub()
@@ -307,6 +325,11 @@ describe 'do with when.once/when.once_per_boot', ->
 	filter = MiyoFilters.autotalks
 	beforeEach ->
 		ms = sinon.stub()
+		ms.filters =
+			property_handler: property_filter.property_handler
+		property_filter.property_initialize.call ms,
+			property_initialize:
+				handlers: ['coffee', 'jse', 'js']
 		ms.variables = {}
 		ms.variables_temporary = {}
 		ms.call_entry = sinon.stub()
@@ -365,6 +388,11 @@ describe 'do with when.period', ->
 	filter = MiyoFilters.autotalks
 	beforeEach ->
 		ms = sinon.stub()
+		ms.filters =
+			property_handler: property_filter.property_handler
+		property_filter.property_initialize.call ms,
+			property_initialize:
+				handlers: ['coffee', 'jse', 'js']
 		ms.variables = {}
 		ms.variables_temporary = {}
 		ms.call_entry = sinon.stub()
@@ -376,18 +404,88 @@ describe 'do with when.period', ->
 	afterEach ->
 		random.restore()
 		clock.restore()
+	it 'should work with .jse', ->
+		argument =
+			autotalks: [
+				{
+					do: 'do when'
+					when:
+						'period.jse': '@1970-*-*/1970-*-*@ && @*:*:0/*:*:1@'
+				}
+				{
+					do: 'do always'
+				}
+			]
+		random.returns 0
+		filter.call(ms, argument, request, id).should.be.equal 'do when'
+	it 'should work with .js', ->
+		argument =
+			autotalks: [
+				{
+					do: 'do when'
+					when:
+						'period.js': 'return @1970-*-*/1970-*-*@ && @*:*:0/*:*:1@'
+				}
+				{
+					do: 'do always'
+				}
+			]
+		random.returns 0
+		filter.call(ms, argument, request, id).should.be.equal 'do when'
+	it 'should work with .coffee', ->
+		argument =
+			autotalks: [
+				{
+					do: 'do when'
+					when:
+						'period.coffee': '@1970-*-*/1970-*-*@ && @*:*:0/*:*:1@'
+				}
+				{
+					do: 'do always'
+				}
+			]
+		random.returns 0
+		filter.call(ms, argument, request, id).should.be.equal 'do when'
+	it 'should work with .* extra stash', ->
+		argument =
+			autotalks: [
+				{
+					do: 'do when'
+					when:
+						'period.js': '''return (stash.dummy == 'dummy') && (new PartPeriod('1970-*-*/1970-*-*')).includes(date)'''
+				}
+				{
+					do: 'do always'
+				}
+			]
+		random.returns 0
+		filter.call(ms, argument, request, id, dummy: 'dummy').should.be.equal 'do when'
+	it 'should throw on wrong .*', ->
+		argument =
+			autotalks: [
+				{
+					do: 'do when'
+					when:
+						'period.jse': 'return @1970-*-*/1970-*-*@ && @*:*:0/*:*:1@'
+				}
+				{
+					do: 'do always'
+				}
+			]
+		random.returns 0
+		(-> filter.call(ms, argument, request, id)).should.throw /period execute error/
 	it 'should work', ->
 		argument =
 			autotalks: [
 				{
 					do: 'do single'
 					when:
-						period: '@*:0:*/*:0:*@'
+						'period.jse': '@*:0:*/*:0:*@'
 				}
 				{
 					do: 'do and'
 					when:
-						period: '@1970-*-*/1970-*-*@ && @*:*:0/*:*:1@'
+						'period.jse': '@1970-*-*/1970-*-*@ && @*:*:0/*:*:1@'
 				}
 				{
 					do: 'do always'
@@ -422,6 +520,11 @@ describe 'do with when.condition', ->
 	filter = MiyoFilters.autotalks
 	beforeEach ->
 		ms = sinon.stub()
+		ms.filters =
+			property_handler: property_filter.property_handler
+		property_filter.property_initialize.call ms,
+			property_initialize:
+				handlers: ['coffee', 'jse', 'js']
 		ms.variables = {}
 		ms.variables_temporary = {}
 		ms.call_entry = sinon.stub()
@@ -431,23 +534,37 @@ describe 'do with when.condition', ->
 		random = sinon.stub Math, 'random'
 	afterEach ->
 		random.restore()
+	it 'should throw on wrong .*', ->
+		argument =
+			autotalks: [
+				{
+					do: 'do when'
+					when:
+						'condition.jse': 'a'
+				}
+				{
+					do: 'do always'
+				}
+			]
+		random.returns 0
+		(-> filter.call(ms, argument, request, id)).should.throw /condition execute error/
 	it 'should work', ->
 		argument =
 			autotalks: [
 				{
 					do: 'do false'
 					when:
-						condition: 'false'
+						'condition.jse': 'false'
 				}
 				{
 					do: 'do true'
 					when:
-						condition: 'true'
+						'condition.jse': 'true'
 				}
 				{
 					do: 'do OnTest2'
 					when:
-						condition: 'id == "OnTest2"'
+						'condition.jse': 'id == "OnTest2"'
 				}
 			]
 		random.returns 0
@@ -465,6 +582,11 @@ describe 'autotalk called with trigger', ->
 	filter = MiyoFilters.autotalks
 	beforeEach ->
 		ms = sinon.stub()
+		ms.filters =
+			property_handler: property_filter.property_handler
+		property_filter.property_initialize.call ms,
+			property_initialize:
+				handlers: ['coffee', 'jse', 'js']
 		ms.variables = {}
 		ms.variables_temporary = {}
 		ms.call_entry = sinon.stub()

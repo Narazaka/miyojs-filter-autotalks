@@ -12,16 +12,18 @@ if (typeof MiyoFilters === "undefined" || MiyoFilters === null) {
 }
 
 MiyoFilters.autotalks_caller = function(argument, request, id, stash) {
-  var count, fluctuation;
+  var count, fluctuation, to_id;
   if (this.variables_temporary.autotalks_caller == null) {
     this.variables_temporary.autotalks_caller = {};
-    if (!this.variables_temporary.autotalks_caller[id]) {
-      this.variables_temporary.autotalks_caller[id] = 0;
-    }
   }
-  id = argument.autotalks_caller.id;
-  count = argument.autotalks_caller.count || 0;
-  fluctuation = argument.autotalks_caller.fluctuation || 0;
+  if (!this.variables_temporary.autotalks_caller[id]) {
+    this.variables_temporary.autotalks_caller[id] = 0;
+  }
+  to_id = this.property(argument.autotalks_caller, 'id', request, id, stash);
+  count = this.property(argument.autotalks_caller, 'count', request, id, stash);
+  count || (count = 0);
+  fluctuation = this.property(argument.autotalks_caller, 'fluctuation', request, id, stash);
+  fluctuation || (fluctuation = 0);
   count = count - fluctuation + Math.round(Math.random() * fluctuation * 2);
   if (stash == null) {
     stash = {};
@@ -32,7 +34,7 @@ MiyoFilters.autotalks_caller = function(argument, request, id, stash) {
   } else {
     this.variables_temporary.autotalks_caller[id]++;
   }
-  return this.call_id(id, request, stash);
+  return this.call_id(to_id, request, stash);
 };
 
 MiyoFilters.autotalks = function(argument, request, id, stash) {
@@ -72,7 +74,7 @@ MiyoFilters.autotalks = function(argument, request, id, stash) {
       return;
     }
   }
-  use_sets = MiyoFilters.autotalks.choose_talks.call(this, autotalks, request, id);
+  use_sets = MiyoFilters.autotalks.choose_talks.call(this, autotalks, request, id, stash);
   return MiyoFilters.autotalks.select_talks.call(this, use_sets, request, id, stash);
 };
 
@@ -111,8 +113,8 @@ MiyoFilters.autotalks.run_chain = function(request, id, stash) {
   }
 };
 
-MiyoFilters.autotalks.choose_talks = function(autotalks, request, id) {
-  var code, date, priority, set, use, use_sets, _i, _len;
+MiyoFilters.autotalks.choose_talks = function(autotalks, request, id, stash) {
+  var date, error, name, period_hook_coffee, period_hook_js, period_hook_jse, period_hooks, period_stash, priority, set, use, use_sets, value, _i, _len;
   date = new Date();
   use_sets = {};
   if (autotalks != null) {
@@ -131,21 +133,46 @@ MiyoFilters.autotalks.choose_talks = function(autotalks, request, id) {
             use = false;
           }
         }
-        if (use && (set.when.period != null)) {
-          if (set.when._period == null) {
-            code = set.when.period.replace(/@([\dT*\/.:-]+)@/g, '(new PartPeriod(\'$1\')).includes(date)');
-            set.when._period = new Function('PartPeriod', 'date', 'request', 'id', 'return ' + code);
+        if (use && this.has_property(set.when, 'period')) {
+          period_hook_js = function(property, request, id, stash) {
+            return 'var PartPeriod = stash.PartPeriod; var date = stash.date; ' + property.replace(/@([\dT*\/.:-]+)@/g, '(new PartPeriod(\'$1\')).includes(date)');
+          };
+          period_hook_jse = function(property, request, id, stash) {
+            return property.replace(/@([\dT*\/.:-]+)@/g, '(new stash.PartPeriod(\'$1\')).includes(stash.date)');
+          };
+          period_hook_coffee = function(property, request, id, stash) {
+            return 'PartPeriod = stash.PartPeriod; date = stash.date; ' + property.replace(/@([\dT*\/.:-]+)@/g, '(new PartPeriod(\'$1\')).includes(date)');
+          };
+          period_hooks = {
+            'js': period_hook_js,
+            'jse': period_hook_jse,
+            'coffee': period_hook_coffee
+          };
+          period_stash = {
+            PartPeriod: PartPeriod,
+            date: new Date()
+          };
+          for (name in stash) {
+            value = stash[name];
+            period_stash[name] = value;
           }
-          if (!set.when._period.call(this, PartPeriod, date, request, id)) {
-            use = false;
+          try {
+            if (!this.property(set.when, 'period', request, id, period_stash, period_hooks)) {
+              use = false;
+            }
+          } catch (_error) {
+            error = _error;
+            throw 'period execute error: ' + error;
           }
         }
-        if (use && (set.when.condition != null)) {
-          if (set.when._condition == null) {
-            set.when._condition = new Function('request', 'id', 'return ' + set.when.condition);
-          }
-          if (!set.when._condition.call(this, request, id)) {
-            use = false;
+        if (use && this.has_property(set.when, 'condition')) {
+          try {
+            if (!this.property(set.when, 'condition', request, id, stash)) {
+              use = false;
+            }
+          } catch (_error) {
+            error = _error;
+            throw 'condition execute error: ' + error;
           }
         }
       }
@@ -179,12 +206,9 @@ MiyoFilters.autotalks.select_talks = function(use_sets, request, id, stash) {
     for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
       set = _ref1[_j];
       bias = 1;
-      if (set.bias != null) {
-        if (set._bias == null) {
-          set._bias = new Function('request', 'id', 'return ' + set.bias);
-        }
+      if (this.has_property(set, 'bias')) {
         try {
-          bias = set._bias.call(this, request, id);
+          bias = this.property(set, 'bias', request, id, stash);
         } catch (_error) {
           error = _error;
           throw 'bias execute error: ' + error;
