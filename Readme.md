@@ -48,7 +48,7 @@ argumentのうちautotalks_callerを使います。
 使用方法
 ----------------------------------------
 
-MiyoのYAML辞書ファイルのエントリにフィルタを追加します。
+Miyoの辞書ファイルのエントリにフィルタを追加します。
 
     OnAITalk:
     	filters: [autotalks]
@@ -68,11 +68,11 @@ argumentのautotalks以下に自動発話の内容を記述します。
     		autotalks:
     			-
     				when:
-    					period: (@2012-*-*/2013-*-*@ && @*-10-12/*-10-16@)
+    					period.jse: (@2012-*-*/2013-*-*@ && @*-10-12/*-10-16@)
     #					justtime: 1
     					once: id
     #					once_per_boot : id
-    					condition: true == 1
+    					condition.jse: true == 1
     				priority: 2
     				bias: 3
     				do:
@@ -86,7 +86,6 @@ autotalks以下にそれぞれの条件をもった発話を配列として記�
 この配列の各要素はそれぞれ以下の属性を持ちます。
 
 これらの属性以外は無視されるので、識別等に使うことが出来ます。
-ただし各属性の前に'_'をつけた属性は予約されていますので、使わないことが無難です。
 
 #### when
 
@@ -96,29 +95,25 @@ autotalks以下にそれぞれの条件をもった発話を配列として記�
 
 以下のうちの指定された属性の条件をすべて満たした場合のみ発話可能となります(AND)。
 
+下記属性にはpropertyフィルタのproperty()が使われている場合がありますが、詳細についてはpropertyフィルタのドキュメントをご覧ください。
+
+property()が使われている属性はキャッシュされるので実行中の値の書き換えを推奨されません。値を実行中に変更したい場合はコードとして指定してください。
+
 ##### period - 期間の指定
 
 この属性が有る場合、指定された期間にのみ発話します。
 
-JavaScriptの式として評価できる文字列をとりますが、'@...@'は'(new PartPeriod(...)).includes(date)'に置換されます。
+通常はperiod.jse, period.coffee等の名前でコードとして指定します(propertyの機能)。
+
+ただし指定された文字列はあらかじめ'@...@'を'(new PartPeriod(...)).includes(date)'に置換されます。
 
 つまり'@...@'の'@'の間にPartPeriodによって解釈できる期間文字列を記述し、それが現在の日付と比較されます。
 
-    period: (@2012-*-*/2013-*-*@ || @*-10-01/*-10-15@) && @12:*/17:*@
+    period.jse: (@2012-*-*/2013-*-*@ || @*-10-01/*-10-15@) && @12:*/17:*@
 
-これは
+この値が真を返した場合のみ発話可能となります。
 
-    function(date){return ((new PartPeriod('2012-*-*/2013-*-*')).includes(date) || (new PartPeriod('*-10-01/*-10-15')).includes(date)) && (new PartPeriod('12:*/17:*')).includes(date)}
-
-と解釈されます。
-
-この式が真を返した場合のみ発話可能となります。
-
-ここに指定された式は最初に実行される前にnew Function()によって関数化されキャッシュされます。
-よってゴーストの実行中にこの値を書き換えることは実行時によって意味を成さず、避けるべきです。
-
-この式はMiyoインスタンスをthisとして評価されます。
-また現在日時を表すdate変数、SHIORIリクエストを表すrequest変数と呼ばれたエントリIDを表すid変数が使えます。
+propertyが提供する変数とともに、現在日時を表すdate変数とPartPeriod変数が使えます。
 
 **注意** この属性は優先度とは関係ないので、期間中一度も発話されないことも考えられます。それを避けたい場合はpriority属性などを同時に利用してください。
 
@@ -160,18 +155,12 @@ JavaScriptの式として評価できる文字列をとりますが、'@...@'は
 
 この属性が有る場合、指定された条件が真である場合のみ発話します。
 
-JavaScriptの式として評価できる文字列をとります。
-ここに指定される式は真偽値を返すべきです。
+通常はcondition.jse, condition.coffee等の名前でコードとして指定します(propertyの機能)。
 
-true等の単純な値や、以下のような実行時によって代わる式も可能です。
+この値が真を返した場合のみ発話可能となります。
 
-    this.variables.hoge_flag == 'yes'
-
-ここに指定された式は最初に実行される前にnew Function()によって関数化されキャッシュされます。
-よってゴーストの実行中にこの値を書き換えることは実行時によって意味を成さず、避けるべきです。
-
-この式はMiyoインスタンスをthisとして評価されます。
-またSHIORIリクエストを表すrequest変数と呼ばれたエントリIDを表すid変数が使えます。
+    condition.jse: -|
+    	this.variables.hoge_flag == 'yes'
 
 #### priority
 
@@ -186,6 +175,8 @@ true等の単純な値や、以下のような実行時によって代わる式�
 
     priority: 1
 
+priority.jse等コードとして指定することもできます(propertyの機能)。
+
 **注意** この属性は常に有効なので一定条件下の制限をつけなければ特定のものばかり発話されることになります。when.once属性やwhen.condition属性などを同時に利用してください。
 
 #### bias
@@ -195,18 +186,7 @@ true等の単純な値や、以下のような実行時によって代わる式�
 
 biasの数値で重み付けられた(エントリのbias)/(全エントリのbiasの合計)の確率で発話が選択されます。
 
-JavaScriptの式として評価できる文字列をとります。
-ここに指定される式は正値を返すべきです。
-
-42等の単純な数値や、以下のような実行時によって代わる式も可能です。
-
-    this.variables.hoge_bias
-
-ここに指定された式は最初に実行される前にnew Function()によって関数化されキャッシュされます。
-よってゴーストの実行中にこの値を書き換えることは実行時によって意味を成さず、避けるべきです。
-
-この式はMiyoインスタンスをthisとして評価されます。
-またSHIORIリクエストを表すrequest変数と呼ばれたエントリIDを表すid変数が使えます。
+bias.jse等コードとして指定することもできます(propertyの機能)。
 
 #### do
 
@@ -241,7 +221,7 @@ when.justtime属性をもつ発話のチェイントークの2つ目以降は通
 
 ### autotalks_caller
 
-stashにautotalks_triggerを付加して指定されたIDのエントリをcall_id()を返します。
+stashにautotalks_triggerを付加して指定されたIDのエントリをcall_id()して返します。
 
 autotalks_triggerが真値である場合、自動発話の条件が満たされたことを示します。
 
@@ -254,7 +234,8 @@ argumentのautotalks_caller以下に自動発話の設定を記述します。
     	argument:
     		autotalks_caller:
     			id: OnAITalk
-    			count: 42
+    			count.jse: -|
+    				this.variables.talk_interval
     			fluctuation: 5
 
 属性は以下の通りです。
@@ -263,33 +244,17 @@ argumentのautotalks_caller以下に自動発話の設定を記述します。
 
 OnAITalkエントリ等にautotalksフィルタを指定しておいて、そのエントリを呼ぶことを想定しています。
 
-JavaScriptの式として評価できる文字列をとります。
-ここに指定される式は正整数値を返すべきです。
-
-単純な文字列や、以下のような実行時によって代わる式も可能です。
-
-    this.variables.aitalk_mode == 'angry' ? 'OnAITalkAngry' : 'OnAITalk'
-
-ここに指定された式は最初に実行される前にnew Function()によって関数化されキャッシュされます。
-よってゴーストの実行中にこの値を書き換えることは実行時によって意味を成さず、避けるべきです。
-
-この式はMiyoインスタンスをthisとして評価されます。
-またSHIORIリクエストを表すrequest変数と呼ばれたエントリIDを表すid変数が使えます。
+id.jse等コードとして指定することもできます(propertyの機能)。
 
 #### count - 通常の自動発話での発話間隔秒数
 
-JavaScriptの式として評価できる文字列をとります。
-ここに指定される式は正整数値を返すべきです。
+発話間隔秒数を指定します。
 
-42等の単純な数値や、以下のような実行時によって代わる式も可能です。
+この値は正整数値であるべきです。
 
-    this.variables.autotalk_interval == 'long' ? 300 : 60
+count.jse等コードとして指定することもできます(propertyの機能)。
 
-ここに指定された式は最初に実行される前にnew Function()によって関数化されキャッシュされます。
-よってゴーストの実行中にこの値を書き換えることは実行時によって意味を成さず、避けるべきです。
-
-この式はMiyoインスタンスをthisとして評価されます。
-またSHIORIリクエストを表すrequest変数と呼ばれたエントリIDを表すid変数が使えます。
+コードによってカウント中にこの値が変わった場合、そのときの値がすぐに使われます。
 
 #### fluctuation - 通常の自動発話での発話間隔秒数のゆらぎ秒数
 
@@ -297,10 +262,11 @@ count属性で指定された秒数±fluctuation属性で指定された秒数�
 
 この属性がない場合、fluctuationは0とされます。
 
-JavaScriptの式として評価できる文字列をとります。
-ここに指定される式は正整数値を返すべきです。
+この値は正整数値であるべきです。
 
-仕様はcount属性と変わりません。
+fluctuation.jse等コードとして指定することもできます(propertyの機能)。
+
+コードによってカウント中にこの値が変わった場合、そのときの値がすぐに使われます。
 
 例
 ----------------------------------------
@@ -340,14 +306,14 @@ autotalksの発話のdo属性はトップレベルのエントリの内容と同
     		autotalks:
     			-
     				when:
-    					period: @*-*-01/*-*-03@
+    					period.jse: @*-*-01/*-*-03@
     				do:
     					filter: [autotalks]
     					argument:
     						autotalks:
     							-
     								when:
-    									condition: this.variables.akeome
+    									condition.jse: this.variables.akeome
     								do:
 				    					- \h\s[0]あけおめ。\e
 
@@ -356,8 +322,6 @@ once属性などを指定する場合はIDが全autotalksで効果があるこ�
 ### OnMinuteChangeのautotalks
 
 時報を通知するにはOnSecondChangeに設定したautotalksでjusttimeを使うのもいいですが、OnMinuteChangeで処理することも可能です。
-
-    
 
 ### 発話のかぶりを防ぐ
 
@@ -377,10 +341,15 @@ autotalksには発話中であることを判定する機能はありません�
     	argument:
     		conditions:
     			-
-    				condition: <%= ! vt.talking %>
-    				result: <%= call_id('OnAITalk') %>
+    				when.jse: this.variables_temporary.talking
+    				do:
+    					filters: [autotalks_caller]
+    					argument:
+    						autotalks_caller:
+    							id: OnAITalk
+    							count: 60
     OnAITalk:
-    	filter: [autotalks_trigger, autotalks]
+    	filter: [autotalks]
     	argument:
     		autotalks_trigger:
     			count: 60
