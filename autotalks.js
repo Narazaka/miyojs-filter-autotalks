@@ -138,7 +138,7 @@ MiyoFilters.autotalks.choose_talks = function(autotalks, request, id, stash) {
             return 'var PartPeriod = stash.PartPeriod; var date = stash.date; ' + property.replace(/@([\dT*\/.:-]+)@/g, '(new PartPeriod(\'$1\')).includes(date)');
           };
           period_hook_jse = function(property, request, id, stash) {
-            return property.replace(/@([\dT*\/.:-]+)@/g, '(new stash.PartPeriod(\'$1\')).includes(stash.date)');
+            return '(PartPeriod = stash.PartPeriod) && (date = stash.date) && (' + (property.replace(/@([\dT*\/.:-]+)@/g, '(new stash.PartPeriod(\'$1\')).includes(stash.date)')) + ')';
           };
           period_hook_coffee = function(property, request, id, stash) {
             return 'PartPeriod = stash.PartPeriod; date = stash.date; ' + property.replace(/@([\dT*\/.:-]+)@/g, '(new PartPeriod(\'$1\')).includes(date)');
@@ -177,8 +177,13 @@ MiyoFilters.autotalks.choose_talks = function(autotalks, request, id, stash) {
         }
       }
       if (use) {
-        if (set.priority != null) {
-          priority = set.priority;
+        if (this.has_property(set, 'priority')) {
+          try {
+            priority = this.property(set, 'priority', request, id, stash);
+          } catch (_error) {
+            error = _error;
+            throw 'priority execute error: ' + error;
+          }
         }
         if (isNaN(priority)) {
           throw "priority must be numeric: " + priority;

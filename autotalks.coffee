@@ -96,7 +96,7 @@ MiyoFilters.autotalks.choose_talks = (autotalks, request, id, stash) ->
 					use = false if @variables_temporary.autotalks.once_per_boot[set.when.once_per_boot]?
 				if use and @has_property set.when, 'period'
 					period_hook_js = (property, request, id, stash) -> 'var PartPeriod = stash.PartPeriod; var date = stash.date; ' + property.replace /@([\dT*\/.:-]+)@/g, '''(new PartPeriod('$1')).includes(date)'''
-					period_hook_jse = (property, request, id, stash) -> property.replace /@([\dT*\/.:-]+)@/g, '''(new stash.PartPeriod('$1')).includes(stash.date)'''
+					period_hook_jse = (property, request, id, stash) -> '(PartPeriod = stash.PartPeriod) && (date = stash.date) && (' + (property.replace /@([\dT*\/.:-]+)@/g, '''(new stash.PartPeriod('$1')).includes(stash.date)''') + ')'
 					period_hook_coffee = (property, request, id, stash) -> 'PartPeriod = stash.PartPeriod; date = stash.date; ' + property.replace /@([\dT*\/.:-]+)@/g, '''(new PartPeriod('$1')).includes(date)'''
 					period_hooks =
 						'js': period_hook_js
@@ -114,7 +114,11 @@ MiyoFilters.autotalks.choose_talks = (autotalks, request, id, stash) ->
 					catch error
 						throw 'condition execute error: ' + error
 			if use
-				priority = set.priority if set.priority?
+				if @has_property set, 'priority'
+					try
+						priority = @property set, 'priority', request, id, stash
+					catch error
+						throw 'priority execute error: ' + error
 				throw "priority must be numeric: #{priority}" if isNaN priority
 				use_sets[priority] = [] unless use_sets[priority]?
 				use_sets[priority].push set

@@ -261,7 +261,7 @@ describe 'do with no "when"', ->
 				}
 				{
 					do: 'do 2'
-					priority: 'a'
+					'priority.jse': '"a"'
 					bias: 3
 				}
 				{
@@ -272,6 +272,25 @@ describe 'do with no "when"', ->
 			]
 		random.returns 0.3
 		(-> filter.call ms, argument, request, id).should.throw /numeric/
+	it 'should throw with wrong priority 2', ->
+		argument =
+			autotalks: [
+				{
+					do: 'do 1'
+				}
+				{
+					do: 'do 2'
+					'priority.jse': 'a'
+					bias: 3
+				}
+				{
+					do: 'do 3'
+					priority: 1
+					bias: 7
+				}
+			]
+		random.returns 0.3
+		(-> filter.call ms, argument, request, id).should.throw /priority execute error/
 
 describe 'chain with no "when"', ->
 	ms = null
@@ -410,7 +429,7 @@ describe 'do with when.period', ->
 				{
 					do: 'do when'
 					when:
-						'period.jse': '@1970-*-*/1970-*-*@ && @*:*:0/*:*:1@'
+						'period.jse': '@1970-*-*/1970-*-*@ && (new PartPeriod("*:*:0/*:*:1")).includes(date)'
 				}
 				{
 					do: 'do always'
@@ -424,7 +443,7 @@ describe 'do with when.period', ->
 				{
 					do: 'do when'
 					when:
-						'period.js': 'return @1970-*-*/1970-*-*@ && @*:*:0/*:*:1@'
+						'period.js': 'return @1970-*-*/1970-*-*@ && (new PartPeriod("*:*:0/*:*:1")).includes(date)'
 				}
 				{
 					do: 'do always'
@@ -438,7 +457,7 @@ describe 'do with when.period', ->
 				{
 					do: 'do when'
 					when:
-						'period.coffee': '@1970-*-*/1970-*-*@ && @*:*:0/*:*:1@'
+						'period.coffee': '@1970-*-*/1970-*-*@ && (new PartPeriod("*:*:0/*:*:1")).includes(date)'
 				}
 				{
 					do: 'do always'
