@@ -41,8 +41,8 @@ argumentのうちautotalks_callerを使います。
 
 このフィルタは以下に依存します。
 
-- [miyojs-filter-variables]()
-- [miyojs-filter-property]()
+- [miyojs-filter-variables](https://github.com/Narazaka/miyojs-filter-variables.git)
+- [miyojs-filter-property](https://github.com/Narazaka/miyojs-filter-property.git)
 - [partperiod](https://www.npmjs.org/package/partperiod)
 
 使用方法
