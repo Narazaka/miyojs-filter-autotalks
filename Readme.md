@@ -328,7 +328,7 @@ once属性などを指定する場合はIDが全autotalksで効果があるこ�
 autotalksには発話中であることを判定する機能はありません。
 そのためそのまま使用したのでは他のトークの発話中にかぶってしまうことがあったり、justtimeの扱いが難しいなどの問題があります。
 
-これを解消するには発話状態を管理するvalue_filterプラグインの[miyojs-filter-talking]()などを利用し、autotalksを呼ぶ前に処理をはさむなどが考えられます。
+これを解消するには発話状態を管理するvalue_filterプラグインの[miyojs-filter-talking](https://github.com/Narazaka/miyojs-filter-talking.git)などを利用し、autotalksを呼ぶ前に処理をはさむなどが考えられます。
 
     _load :
     	filters : [..., append_value_filters, ...]

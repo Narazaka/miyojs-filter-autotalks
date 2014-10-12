@@ -1,6 +1,6 @@
 {
 	"name": "miyojs-filter-autotalks",
-	"version": "0.0.2",
+	"version": "0.0.3",
 	"description": "autotalks - useful for AITalks",
 	"main": "autotalks.js",
 	"scripts": {
