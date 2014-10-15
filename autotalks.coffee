@@ -6,7 +6,7 @@ if require?
 unless MiyoFilters?
 	MiyoFilters = {}
 
-MiyoFilters.autotalks_caller = (argument, request, id, stash) ->
+MiyoFilters.autotalks_caller = type: 'data-value', filter: (argument, request, id, stash) ->
 	unless @variables_temporary.autotalks_caller?
 		@variables_temporary.autotalks_caller = {}
 	unless @variables_temporary.autotalks_caller[id]
@@ -25,7 +25,7 @@ MiyoFilters.autotalks_caller = (argument, request, id, stash) ->
 		@variables_temporary.autotalks_caller[id]++
 	@call_id to_id, request, stash
 
-MiyoFilters.autotalks = (argument, request, id, stash) ->
+MiyoFilters.autotalks = type: 'data-value', filter: (argument, request, id, stash) ->
 	unless @variables.autotalks?
 		@variables.autotalks = {once: {}}
 	unless @variables_temporary.autotalks?
