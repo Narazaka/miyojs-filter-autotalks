@@ -1,6 +1,6 @@
 {
 	"name": "miyojs-filter-autotalks",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"description": "autotalks - useful for AITalks",
 	"keywords": ["miyojs", "miyojs-filter"],
 	"main": "autotalks.js",
@@ -8,6 +8,7 @@
 		"test": "mocha"
 	},
 	"dependencies": {
+		"partperiod": ">= 0.0.1"
 	},
 	"devDependencies": {
 		"coffee-script": ">= 1.8.0",
@@ -15,7 +16,6 @@
 		"chai": ">= 1.9.2",
 		"sinon": ">= 1.10.3",
 		"istanbul": ">= 0.3.2",
-		"partperiod": ">= 0.0.1",
 		"miyojs": ">= 1.0.3",
 		"miyojs-filter-property": ">= 1.0.0",
 		"miyojs-filter-variables": ">= 1.0.0"
